@@ -62,18 +62,22 @@ public class Message {
 	 */
 	
 	public static int warning(String msg) {
+		Utils.getSound("warning").playWav();
 		return JOptionPane.showConfirmDialog(null, msg, "XÁC NHẬN!", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE, Utils.getIcon("warning"));
 	}
 	
 	public static int warning(String msg, String title) {
+		Utils.getSound("warning").playWav();
 		return JOptionPane.showConfirmDialog(null, msg, title, JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE, Utils.getIcon("warning"));
 	}
 	
 	public static int warning(String msg, Icon icon) {
+		Utils.getSound("warning").playWav();
 		return JOptionPane.showConfirmDialog(null, msg, "XÁC NHẬN!", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE, icon);
 	}
 	
 	public static int warning(String msg, String title, Icon icon) {
+		Utils.getSound("warning").playWav();
 		return JOptionPane.showConfirmDialog(null, msg, title, JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE, icon);
 	}
 	

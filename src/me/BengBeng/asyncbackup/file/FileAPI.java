@@ -44,10 +44,11 @@ public class FileAPI {
 				set("date-format", "dd-MM-yyyy HH-mm-ss");
 				set("input-path", home);
 				set("output-path", home + File.separator + "BACKUP");
-				set("file-name", "{name} _ {time}");
+				set("file-name", "");
 				set("file-extension", ".zip");
 				
 				set("auto-backup", false);
+				set("backup-time", 0);
 				set("override-file", false);
 			} catch(Exception ex) {
 				ex.printStackTrace();

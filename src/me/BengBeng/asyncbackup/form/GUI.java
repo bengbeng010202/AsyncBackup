@@ -4,6 +4,8 @@ import java.awt.Color;
 import java.awt.Cursor;
 import java.awt.EventQueue;
 import java.awt.Font;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.awt.event.ItemEvent;
 import java.awt.event.ItemListener;
 import java.awt.event.MouseAdapter;
@@ -15,9 +17,11 @@ import java.io.File;
 import java.nio.file.Path;
 import java.util.Random;
 
+import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
+import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTextField;
@@ -55,6 +59,8 @@ public class GUI
 	private JLabel FILE_NAME_label;
 	private JTextField typeFileNameText;
 	private JComboBox<String> extension_comboBox;
+	private JCheckBox OVERRIDE_checkBox;
+	
 	private JLabel BACKUP_button;
 	private JLabel GOTO_AUTO_button;
 	
@@ -405,7 +411,6 @@ public class GUI
 					new Thread(() -> {
 						String text = Utils.removeInvalid(name, "[\\p{L}\\_\\-\\.\\{\\}\\%\\s]*");
 						typeFileNameText.setText(text);
-						typeFileNameText.setCaretPosition(event.getDot());
 						Message.error("Tên file không thể chứa ký tự đặc biệt!");
 					}).start();
 				} else {
@@ -443,8 +448,22 @@ public class GUI
 		extension_comboBox.setForeground(Color.BLACK);
 		extension_comboBox.setBackground(new Color(150, 150, 150));
 		extension_comboBox.setBounds(340, 105, 65, 20);
-		Utils.getOptionPane().setToolTipText(extension_comboBox, "Chọn định dạng cho file mà bạn muốn lưu lại.");
+		Utils.getOptionPane().setToolTipText(extension_comboBox, "Chọn định dạng cho file mà bạn muốn sao lưu.");
 		main_panel.add(extension_comboBox);
+		
+		OVERRIDE_checkBox = new JCheckBox("GHI ĐÈ");
+		OVERRIDE_checkBox.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent event) {
+				boolean override = OVERRIDE_checkBox.isSelected();
+				Utils.getFileAPI().set("override-file", override);
+			}
+		});
+		OVERRIDE_checkBox.setFont(new Font("Tahoma", Font.PLAIN, 12));
+		OVERRIDE_checkBox.setHorizontalAlignment(SwingConstants.CENTER);
+		OVERRIDE_checkBox.setForeground(Color.ORANGE);
+		OVERRIDE_checkBox.setBackground(new Color(50, 50, 50));
+		OVERRIDE_checkBox.setBounds(30, 145, 95, 20);
+		main_panel.add(OVERRIDE_checkBox);
 		
 		
 		
@@ -480,17 +499,33 @@ public class GUI
 						Utils.getOptionPane().addText(CONSOLE_textPane, new Color(255, 50, 50), "[" + Utils.getTime() + "] Vui lòng nhập tên file mà bạn muốn sao lưu!");
 						return;
 					}
-					File output = new File(outputPath + sep + (outputName
-							.replaceAll("(?ium)(\\{name}|\\%name%)", input.getName())
+					File[] files = new File(outputPath).listFiles();
+					File output = new File(outputPath + sep + (outputName.replaceAll("(?ium)(\\{name}|\\%name%)", input.getName())
 							.replaceAll("(?ium)(\\{date}|\\%date%|\\{time}|\\%time%)", Utils.getDate())
-							.replaceAll("(?ium)(\\{number}|\\%number%)", String.valueOf(new File(outputPath).listFiles().length))) + extension_comboBox.getSelectedItem().toString());
+							.replaceAll("(?ium)(\\{number}|\\%number%)", String.valueOf(files.length))) + extension_comboBox.getSelectedItem().toString());
 					Path outPath = output.toPath();
+					
+					if(!Utils.getFileAPI().getBoolean("override-file")) {
+						for(int x = 0; x < files.length; x++) {
+							String name = files[x].getName();
+							if(name.equals(output.getName())) {
+								int key = Message.warning("Tên file này đã tồn tại! Bạn có muốn thay thế ?");
+								if(key != JOptionPane.YES_OPTION) {
+									Utils.getSound("error").playWav();
+									Utils.getOptionPane().addText(CONSOLE_textPane, new Color(255, 50, 50), "[" + Utils.getTime() + "] Sao lưu thất bại vì bị trùng tên file!");
+									return;
+								}
+								break;
+							}
+						}
+					}
 					
 					Utils.getSound("click").playWav();
 					Utils.getOptionPane().addText(CONSOLE_textPane, Color.ORANGE, "[" + Utils.getTime() + "] Đang tiến hành sao lưu dữ liệu...");
 					
 					typeFileNameText.setEnabled(backuping);
 					extension_comboBox.setEnabled(backuping);
+					OVERRIDE_checkBox.setEnabled(backuping);
 					
 					new Thread(() -> {
 						if(backuping == false) {
@@ -502,6 +537,7 @@ public class GUI
 							Utils.getSound("success").playWav();
 							typeFileNameText.setEnabled(backuping);
 							extension_comboBox.setEnabled(backuping);
+							OVERRIDE_checkBox.setEnabled(backuping);
 							Utils.getOptionPane().addText(CONSOLE_textPane, new Color(0, 255, 0), "[" + Utils.getTime() + "] Sao lưu dữ liệu thành công!");
 							backuping = false;
 						}
@@ -552,7 +588,7 @@ public class GUI
 				}
 				int id = event.getModifiers();
 				if(id == 16) {
-					Utils.getSound("click").playWav();
+					Utils.getSound("switch").playWav();
 					Utils.getFileAPI().set("auto-backup", true);
 					Utils.closeGui();
 					Utils.openAutoGui();
@@ -622,6 +658,7 @@ public class GUI
 		CONSOLE_textPane.setBorder(null);
 		CONSOLE_textPane.setBackground(new Color(50, 50, 50));
 		CONSOLE_scrollPane.setViewportView(CONSOLE_textPane);
+		
 	}
 	
 	
@@ -650,10 +687,12 @@ public class GUI
 		String input = Utils.getFileAPI().getString("input-path");
 		String output = Utils.getFileAPI().getString("output-path");
 		String fileName = Utils.getFileAPI().getString("file-name");
+		boolean override = Utils.getFileAPI().getBoolean("override-file");
 		
 		INPUT_textField.setText(input);
 		OUTPUT_textField.setText(output);
 		typeFileNameText.setText(fileName);
+		OVERRIDE_checkBox.setSelected(override);
 	}
 	
 	
@@ -682,5 +721,4 @@ public class GUI
 	private int getRandomInt(int min, int max) {
 		return (new Random().nextInt((max - min) + 1) + min);
 	}
-	
 }

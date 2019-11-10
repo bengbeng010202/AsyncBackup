@@ -4,6 +4,8 @@ import java.awt.Color;
 import java.awt.Cursor;
 import java.awt.EventQueue;
 import java.awt.Font;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.awt.event.FocusAdapter;
 import java.awt.event.FocusEvent;
 import java.awt.event.ItemEvent;
@@ -19,9 +21,11 @@ import java.util.Random;
 import java.util.Timer;
 import java.util.TimerTask;
 
+import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
+import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JSeparator;
@@ -68,6 +72,7 @@ public class AutoGUI
 	private JLabel FILE_NAME_label;
 	private JTextField typeFileNameText;
 	private JComboBox<String> extension_comboBox;
+	private JCheckBox OVERRIDE_checkBox;
 	
 	private JPanel TIME_panel;
 	
@@ -437,7 +442,6 @@ public class AutoGUI
 					new Thread(() -> {
 						String text = Utils.removeInvalid(name, "[\\p{L}\\_\\-\\.\\{\\}\\%\\s]*");
 						typeFileNameText.setText(text);
-						typeFileNameText.setCaretPosition(typeFileNameText.getText().length());
 						Message.error("Tên file không thể chứa ký tự đặc biệt!");
 					}).start();
 				} else {
@@ -477,6 +481,20 @@ public class AutoGUI
 		extension_comboBox.setBounds(340, 105, 65, 20);
 		Utils.getOptionPane().setToolTipText(extension_comboBox, "Chọn định dạng cho file mà bạn muốn lưu lại.");
 		main_panel.add(extension_comboBox);
+		
+		OVERRIDE_checkBox = new JCheckBox("GHI ĐÈ");
+		OVERRIDE_checkBox.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent event) {
+				boolean override = OVERRIDE_checkBox.isSelected();
+				Utils.getFileAPI().set("override-file", override);
+			}
+		});
+		OVERRIDE_checkBox.setFont(new Font("Tahoma", Font.PLAIN, 12));
+		OVERRIDE_checkBox.setHorizontalAlignment(SwingConstants.CENTER);
+		OVERRIDE_checkBox.setForeground(Color.ORANGE);
+		OVERRIDE_checkBox.setBackground(new Color(50, 50, 50));
+		OVERRIDE_checkBox.setBounds(30, 210, 95, 20);
+		main_panel.add(OVERRIDE_checkBox);
 		
 		
 		
@@ -589,7 +607,7 @@ public class AutoGUI
 		TIME_panel.add(MINUTES_label);
 		
 		SECONDS_spinner = new JSpinner();
-		SECONDS_spinner.setModel(new SpinnerNumberModel(0, 0, 999, 1));
+		SECONDS_spinner.setModel(new SpinnerNumberModel(5, 5, 999, 1));
 		SECONDS_spinner.setFont(new Font("Tahoma", Font.PLAIN, 12));
 		SECONDS_spinner.setBounds(300, 20, 40, 20);
 		TIME_panel.add(SECONDS_spinner);
@@ -631,7 +649,7 @@ public class AutoGUI
 			}
 		});
 		ONLY_SECONDS_spinner.setVisible(false);
-		ONLY_SECONDS_spinner.setModel(new SpinnerNumberModel(0, 0, 2147483647, 1));
+		ONLY_SECONDS_spinner.setModel(new SpinnerNumberModel(5, 5, 2147483647, 1));
 		ONLY_SECONDS_spinner.setFont(new Font("Tahoma", Font.PLAIN, 12));
 		ONLY_SECONDS_spinner.setBounds(20, 20, 90, 20);
 		TIME_panel.add(ONLY_SECONDS_spinner);
@@ -670,6 +688,7 @@ public class AutoGUI
 					setStatusAll(starting);
 					switchButton(START_STOP_button, starting);
 					if(starting == true) {
+						Utils.getOptionPane().addText(CONSOLE_textPane, new Color(255, 50, 50), "[" + Utils.getTime() + "] Thời gian tự động sao lưu đã dừng lại.");
 						stop();
 						starting = false;
 					} else {
@@ -680,9 +699,13 @@ public class AutoGUI
 							int seconds = Integer.parseInt(SECONDS_spinner.getValue().toString());
 							
 							int time = Utils.getTimeByCorrect(days, hours, minutes, seconds);
+							Utils.getFileAPI().set("backup-time", time);
+							Utils.getOptionPane().addText(CONSOLE_textPane, Color.YELLOW, "[" + Utils.getTime() + "] Đã bắt đầu tự động sao lưu mỗi: " + Utils.getFormatTime(time) + ".");
 							start(time);
 						} else {
 							int time = Integer.parseInt(ONLY_SECONDS_spinner.getValue().toString());
+							Utils.getFileAPI().set("backup-time", time);
+							Utils.getOptionPane().addText(CONSOLE_textPane, Color.YELLOW, "[" + Utils.getTime() + "] Đã bắt đầu tự động sao lưu mỗi: " + Utils.getFormatTime(time) + ".");
 							start(time);
 						}
 						starting = true;
@@ -727,7 +750,7 @@ public class AutoGUI
 				}
 				int id = event.getModifiers();
 				if(id == 16) {
-					Utils.getSound("click").playWav();
+					Utils.getSound("switch").playWav();
 					Utils.getFileAPI().set("auto-backup", false);
 					Utils.closeAutoGui();
 					Utils.openGui();
@@ -848,6 +871,8 @@ public class AutoGUI
 		
 		extension_comboBox.setEnabled(stats);
 		
+		OVERRIDE_checkBox.setEnabled(stats);
+		
 		if(correctTime == true) {
 			DAYS_spinner.setEnabled(stats);
 			HOURS_spinner.setEnabled(stats);
@@ -874,7 +899,6 @@ public class AutoGUI
 	
 	
 	public void start(int time) {
-		Utils.getOptionPane().addText(CONSOLE_textPane, Color.YELLOW, "[" + Utils.getTime() + "] Đã bắt đầu tự động sao lưu mỗi: " + Utils.getFormatTime(time) + ".");
 		timer = new Timer();
 		timer.scheduleAtFixedRate(new TimerTask() {
 			@Override
@@ -885,7 +909,6 @@ public class AutoGUI
 	}
 	
 	public void stop() {
-		Utils.getOptionPane().addText(CONSOLE_textPane, new Color(255, 50, 50), "[" + Utils.getTime() + "] Thời gian tự động sao lưu đã dừng lại.");
 		timer.cancel();
 	}
 	
@@ -914,11 +937,31 @@ public class AutoGUI
 			Utils.getOptionPane().addText(CONSOLE_textPane, new Color(255, 50, 50), "[" + Utils.getTime() + "] Vui lòng nhập tên file mà bạn muốn sao lưu!");
 			return;
 		}
+		File[] files = new File(outputPath).listFiles();
 		File output = new File(outputPath + sep + (outputName
 				.replaceAll("(?ium)(\\{name}|\\%name%)", input.getName())
 				.replaceAll("(?ium)(\\{date}|\\%date%|\\{time}|\\%time%)", Utils.getDate())
-				.replaceAll("(?ium)(\\{number}|\\%number%)", String.valueOf(new File(outputPath).listFiles().length))) + extension_comboBox.getSelectedItem().toString());
+				.replaceAll("(?ium)(\\{number}|\\%number%)", String.valueOf(files.length))) + extension_comboBox.getSelectedItem().toString());
 		Path outPath = output.toPath();
+		
+		if(!Utils.getFileAPI().getBoolean("override-file")) {
+			for(int x = 0; x < files.length; x++) {
+				String name = files[x].getName();
+				if(name.equals(output.getName())) {
+					stop();
+					int key = Message.warning("Tên file này đã tồn tại! Bạn có muốn thay thế ?");
+					if(key != JOptionPane.YES_OPTION) {
+						Utils.getSound("error").playWav();
+						Utils.getOptionPane().addText(CONSOLE_textPane, new Color(255, 50, 50), "[" + Utils.getTime() + "] Sao lưu thất bại vì bị trùng tên file!");
+						setStatusAll(starting);
+						switchButton(START_STOP_button, starting);
+						starting = false;
+						return;
+					}
+					break;
+				}
+			}
+		}
 		
 		Utils.getOptionPane().addText(CONSOLE_textPane, Color.ORANGE, "[" + Utils.getTime() + "] Đang tiến hành sao lưu dữ liệu...");
 		
@@ -932,6 +975,11 @@ public class AutoGUI
 				Utils.getSound("success").playWav();
 				Utils.getOptionPane().addText(CONSOLE_textPane, new Color(0, 255, 0), "[" + Utils.getTime() + "] Sao lưu dữ liệu thành công!");
 				backuping = false;
+			}
+			
+			if(!Utils.getFileAPI().getBoolean("override-file")) {
+				int time = Utils.getFileAPI().getInt("backup-time");
+				start(time);
 			}
 		}).start();
 	}
@@ -968,10 +1016,12 @@ public class AutoGUI
 		String input = Utils.getFileAPI().getString("input-path");
 		String output = Utils.getFileAPI().getString("output-path");
 		String fileName = Utils.getFileAPI().getString("file-name");
+		boolean override = Utils.getFileAPI().getBoolean("override-file");
 		
 		INPUT_textField.setText(input);
 		OUTPUT_textField.setText(output);
 		typeFileNameText.setText(fileName);
+		OVERRIDE_checkBox.setSelected(override);
 	}
 	
 	
